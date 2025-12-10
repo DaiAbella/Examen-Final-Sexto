@@ -12,19 +12,26 @@ public class PlayerHealth : NetworkBehaviour
 
     public override void Spawned()
     {
-        CurrentHealth = maxHealth;
+        if (Object.HasStateAuthority)
+        {
+            CurrentHealth = maxHealth;
+        }
     }
 
     public void TakeDamage(int amount, PlayerRef attacker)
     {
         if (isDead) return;
 
-        CurrentHealth -= amount;
-        Debug.Log("Daño recibido: " + amount);
-
-        if (CurrentHealth <= 0)
+        // ✅ Solo el host (StateAuthority) modifica la vida
+        if (Object.HasStateAuthority)
         {
-            Die(attacker);
+            CurrentHealth -= amount;
+            Debug.Log($"[PlayerHealth] Daño recibido: {amount}. Vida restante: {CurrentHealth}");
+
+            if (CurrentHealth <= 0)
+            {
+                Die(attacker);
+            }
         }
     }
 
@@ -40,7 +47,8 @@ public class PlayerHealth : NetworkBehaviour
             renderer.enabled = false;
         }
 
-        Runner.StartCoroutine(Respawn());
+        // ✅ Usa StartCoroutine de Unity, no Runner
+        StartCoroutine(Respawn());
     }
 
     private IEnumerator Respawn()
@@ -50,17 +58,16 @@ public class PlayerHealth : NetworkBehaviour
         CurrentHealth = maxHealth;
         isDead = false;
 
-        // ✅ Pedir un nuevo spawn cada vez
         Transform newSpawn = GameManager.Instance.GetRandomSpawnPoint();
         if (newSpawn != null)
         {
             transform.position = newSpawn.position;
             transform.rotation = newSpawn.rotation;
-            Debug.Log("Respawn en nuevo punto: " + newSpawn.name);
+            Debug.Log("[PlayerHealth] Respawn en nuevo punto: " + newSpawn.name);
         }
         else
         {
-            Debug.LogError("No se encontró un spawn point en GameManager.");
+            Debug.LogError("[PlayerHealth] No se encontró un spawn point en GameManager.");
         }
 
         GetComponent<KCC>().enabled = true;

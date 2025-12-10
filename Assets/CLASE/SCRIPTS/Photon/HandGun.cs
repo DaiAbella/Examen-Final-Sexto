@@ -1,4 +1,4 @@
-using Fusion;
+﻿using Fusion;
 using UnityEngine;
 
 public class HandGun : NetworkBehaviour
@@ -12,23 +12,38 @@ public class HandGun : NetworkBehaviour
         {
             if (data.shoot)
             {
-                FireProjectile();
+                // Cliente pide disparo → host lo ejecuta
+                Rpc_FireProjectile(data.fireDirection);
             }
         }
     }
 
-    private void FireProjectile()
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void Rpc_FireProjectile(Vector3 direction)
     {
         if (Runner != null && projectilePrefab != null && firePoint != null)
         {
-            Debug.Log("Disparo realizado por: " + Object.InputAuthority);
+            Debug.Log("RPC Disparo realizado por: " + Object.InputAuthority);
 
-            Runner.Spawn(
+            Quaternion rotation = Quaternion.LookRotation(direction);
+
+            // ✅ Spawn del proyectil en el host
+            var proj = Runner.Spawn(
                 projectilePrefab,
                 firePoint.position,
-                firePoint.rotation,
+                rotation,
                 Object.InputAuthority
             );
+
+            // ✅ Asignar shooter y daño al proyectil
+            if (proj != null)
+            {
+                Projectile projectileScript = proj.GetComponent<Projectile>();
+                if (projectileScript != null)
+                {
+                    projectileScript.SetProjectile(Object.InputAuthority, 25);
+                }
+            }
         }
     }
 }

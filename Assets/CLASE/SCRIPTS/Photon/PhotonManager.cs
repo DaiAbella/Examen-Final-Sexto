@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Fusion;
 using Fusion.Sockets;
 using System.Collections.Generic;
@@ -10,86 +10,76 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
 {
     [SerializeField] private NetworkRunner runner;
     [SerializeField] private NetworkPrefabRef prefab;
-    [SerializeField] NetworkSceneManagerDefault sceneManager;
+    [SerializeField] private NetworkSceneManagerDefault sceneManager;
     [SerializeField] private Transform[] spawnPoint;
-    [SerializeField] UnityEvent onPlayerJoined;
+    [SerializeField] private UnityEvent onPlayerJoined;
 
-    Dictionary<PlayerRef, NetworkObject> players = new Dictionary<PlayerRef, NetworkObject>();
+    private Dictionary<PlayerRef, NetworkObject> players = new Dictionary<PlayerRef, NetworkObject>();
 
-
-    #region Metodos de Photon
-
-
+    #region Métodos de Photon
 
     public void OnConnectedToServer(NetworkRunner runner)
     {
-
     }
 
     public void OnConnectFailed(NetworkRunner runner, NetAddress remoteAddress, NetConnectFailedReason reason)
     {
-
     }
 
     public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token)
     {
-
     }
 
     public void OnCustomAuthenticationResponse(NetworkRunner runner, Dictionary<string, object> data)
     {
-
     }
 
     public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason)
     {
-
     }
 
     public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken)
     {
-
     }
 
     public void OnInput(NetworkRunner runner, NetworkInput input)
     {
         var data = new NetworkInputData();
 
-        // Movimiento: si no hay input, usar Vector2.zero
+        // Movimiento
         Vector2 moveInput = InputManager.Instance.GetMoveInput();
-        data.move = moveInput == null ? Vector2.zero : moveInput;
+        data.move = moveInput;      // (No puede ser null, Vector2 es struct)
 
-        // Rotaci�n con el mouse
+        // Rotación con el mouse
         data.look = InputManager.Instance.GetMouseDelta();
 
         // Estado de correr
         data.isRunning = InputManager.Instance.WasRunInputPressed();
 
-        // Rotaci�n en Y de la c�mara principal
+        // Rotación de la cámara
         if (Camera.main != null)
             data.yRotation = Camera.main.transform.eulerAngles.y;
 
         // Disparo
         data.shoot = InputManager.Instance.ShootInputPressed();
 
-        // Enviar el input al runner
+        // Dirección del disparo
+        if (data.shoot && Camera.main != null)
+            data.fireDirection = Camera.main.transform.forward;
+
         input.Set(data);
     }
 
-
     public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input)
     {
-
     }
 
     public void OnObjectEnterAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player)
     {
-
     }
 
     public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player)
     {
-
     }
 
     public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
@@ -97,58 +87,62 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
         if (runner.IsServer)
         {
             int randomSpawn = UnityEngine.Random.Range(0, spawnPoint.Length);
-            NetworkObject networkPlayer = runner.Spawn(prefab, spawnPoint[randomSpawn].position, spawnPoint[randomSpawn].rotation, player);
+
+            NetworkObject networkPlayer = runner.Spawn(
+                prefab,
+                spawnPoint[randomSpawn].position,
+                spawnPoint[randomSpawn].rotation,
+                player
+            );
+
             players.Add(player, networkPlayer);
+
+            // 🔹 Arrancar partida cuando haya jugadores
+            if (GameManager.Instance != null)
+                GameManager.Instance.CheckPlayersAndStart(runner);
         }
 
-        onPlayerJoined.Invoke();
+        if (onPlayerJoined != null)
+            onPlayerJoined.Invoke();
     }
 
     public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
     {
-
         if (players.TryGetValue(player, out NetworkObject networkPlayer))
         {
             runner.Despawn(networkPlayer);
             players.Remove(player);
         }
-
     }
 
     public void OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key, float progress)
     {
-
     }
 
     public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data)
     {
-
     }
 
     public void OnSceneLoadDone(NetworkRunner runner)
     {
-
     }
 
     public void OnSceneLoadStart(NetworkRunner runner)
     {
-
     }
 
     public void OnSessionListUpdated(NetworkRunner runner, List<SessionInfo> sessionList)
     {
-
     }
 
     public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason)
     {
-
     }
 
     public void OnUserSimulationMessage(NetworkRunner runner, SimulationMessagePtr message)
     {
-
     }
+
     #endregion
 
     private async void StartGame(GameMode mode)
@@ -156,26 +150,21 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
         runner.AddCallbacks(this);
         runner.ProvideInput = true;
 
-        var Scene = SceneRef.FromIndex(0);
+        var scene = SceneRef.FromIndex(0);
+        var sceneInfo = new NetworkSceneInfo();
 
-        var SceneInfo = new NetworkSceneInfo();
-
-        if (Scene.IsValid)
-        {
-            SceneInfo.AddSceneRef(Scene, LoadSceneMode.Additive);
-        }
+        if (scene.IsValid)
+            sceneInfo.AddSceneRef(scene, LoadSceneMode.Additive);
 
         await runner.StartGame(new StartGameArgs()
         {
             GameMode = mode,
             SessionName = "#0001",
-            Scene = Scene,
+            Scene = scene,
             CustomLobbyName = "Official EA Europe",
             SceneManager = sceneManager
-
         });
     }
-
 
     public void StartGameAsHost()
     {

@@ -6,48 +6,54 @@ public class UIManager : MonoBehaviour
 {
     public static UIManager Instance;
 
+    [Header("Paneles UI")]
+    [SerializeField] private GameObject panelStartButtons;
+    [SerializeField] private GameObject panelGameUI;
+    [SerializeField] private GameObject panelEndMatch;
+
     [Header("Referencias UI (TMP)")]
     [SerializeField] private TMP_Text timerText;
     [SerializeField] private TMP_Text scoreText;
-    [SerializeField] private GameObject endMatchPanel;
     [SerializeField] private TMP_Text winnerText;
 
     private NetworkRunner runner;
 
     private void Awake()
     {
-        if (Instance == null) Instance = this;
+        Instance = this;
+
+        // Estado inicial
+        ShowStartPanel(true);
+        ShowGameCanvas(false);
+        ShowEndPanel(false);
+
+        Debug.Log("[UIManager] Awake. Paneles inicializados.");
     }
 
     private void Start()
     {
         runner = FindObjectOfType<NetworkRunner>();
+        if (runner == null) Debug.LogWarning("[UIManager] No se encontró NetworkRunner.");
     }
 
     private void Update()
     {
         if (GameManager.Instance == null || runner == null) return;
 
-        // Verifica que el NetworkObject del GameManager esté inicializado por Fusion
-        var gm = GameManager.Instance;
-        if (gm.Object == null || !gm.Object.IsValid) return;
-
         // ⏱ Actualizar Timer
         if (timerText != null)
         {
-            int timeLeft = gm.Timer;
-            timerText.text = $"Tiempo: {timeLeft}s";
+            timerText.text = $"Tiempo: {GameManager.Instance.Timer}s";
         }
 
         // 🏁 Actualizar marcador
         if (scoreText != null)
         {
             string scoresDisplay = "";
-            // runner.ActivePlayers puede estar vacío al inicio; iterar de forma segura
             foreach (var player in runner.ActivePlayers)
             {
                 int index = player.RawEncoded;
-                int score = gm.GetScore(player);
+                int score = GameManager.Instance.GetScore(player);
                 scoresDisplay += $"Jugador {index}: {score}\n";
             }
 
@@ -55,14 +61,38 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    // 🏆 Mostrar pantalla final
-    public void ShowEndMatch(int winnerIndex, int maxScore)
+    // 🔹 Activar/desactivar panel de inicio
+    public void ShowStartPanel(bool active)
     {
-        if (endMatchPanel != null) endMatchPanel.SetActive(true);
-        if (winnerText != null) winnerText.text = $"🏆 Ganador: Jugador {winnerIndex} con {maxScore} puntos";
+        if (panelStartButtons != null) panelStartButtons.SetActive(active);
+        Debug.Log($"[UIManager] Panel_StartButtons activo: {active}");
     }
 
-    // Botón de salir
+    // 🔹 Activar/desactivar panel de juego
+    public void ShowGameCanvas(bool active)
+    {
+        if (panelGameUI != null) panelGameUI.SetActive(active);
+        Debug.Log($"[UIManager] Panel_GameUI activo: {active}");
+    }
+
+    // 🔹 Activar/desactivar panel de fin de partida
+    public void ShowEndPanel(bool active)
+    {
+        if (panelEndMatch != null) panelEndMatch.SetActive(active);
+        Debug.Log($"[UIManager] Panel_EndMatch activo: {active}");
+    }
+
+    // 🏆 Mostrar texto de ganador
+    public void ShowEndMatch(int winnerIndex, int maxScore)
+    {
+        if (winnerText != null)
+        {
+            winnerText.text = $"🏆 Ganador: Jugador {winnerIndex} con {maxScore} puntos";
+            Debug.Log($"[UIManager] Texto de ganador actualizado.");
+        }
+    }
+
+    // 🔘 Botón de salir
     public void OnExitButton()
     {
         Application.Quit();
@@ -71,18 +101,14 @@ public class UIManager : MonoBehaviour
 #endif
     }
 
-    // Botón de intentar de nuevo
+    // 🔁 Botón de intentar de nuevo
     public void OnRetryButton()
     {
-        if (endMatchPanel != null) endMatchPanel.SetActive(false);
+        ShowEndPanel(false);
 
         if (GameManager.Instance != null && runner != null)
         {
-            var gm = GameManager.Instance;
-            if (gm.Object != null && gm.Object.IsValid)
-            {
-                gm.RegisterRetryVote(runner.LocalPlayer);
-            }
+            GameManager.Instance.RegisterRetryVote(runner.LocalPlayer);
         }
     }
 }

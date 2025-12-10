@@ -1,34 +1,44 @@
-﻿using Fusion;
+﻿using System.Linq;
+using Fusion;
 using UnityEngine;
 
 public class GameManager : NetworkBehaviour
 {
     public static GameManager Instance;
 
+    [Header("Spawns")]
     [SerializeField] private Transform[] spawnPoints;
 
     [Networked] public int Timer { get; set; }
-    [Networked, Capacity(10)] private NetworkArray<int> scores => default;
-    [Networked, Capacity(10)] private NetworkArray<bool> retryVotes => default;
+    [Networked, Capacity(16)] private NetworkArray<int> scores => default;
+    [Networked, Capacity(16)] private NetworkArray<bool> retryVotes => default;
 
     private bool matchRunning = false;
-    private float lastTickTime;
+    private double lastTickTime;
 
     private void Awake()
     {
-        if (Instance == null) Instance = this;
+        Instance = this;
+        Debug.Log("[GameManager] Awake: Instance asignada.");
     }
 
-    public void SetSpawnPoints(Transform[] points)
+    public override void Spawned()
     {
-        spawnPoints = points;
+        Debug.Log($"[GameManager] Spawned. StateAuthority={Object.HasStateAuthority}");
+
+        if (Object.HasStateAuthority)
+        {
+            Timer = 60;
+            lastTickTime = Runner.SimulationTime;
+            Debug.Log("[GameManager] Timer inicializado en host.");
+        }
     }
 
     public Transform GetRandomSpawnPoint()
     {
         if (spawnPoints == null || spawnPoints.Length == 0)
         {
-            Debug.LogError("No hay spawnPoints asignados en GameManager.");
+            Debug.LogError("[GameManager] No hay spawnPoints asignados.");
             return null;
         }
 
@@ -36,37 +46,34 @@ public class GameManager : NetworkBehaviour
         return spawnPoints[index];
     }
 
-    public void AddKill(PlayerRef killer)
+    public void CheckPlayersAndStart(NetworkRunner runner)
     {
-        int index = killer.RawEncoded;
-        scores.Set(index, scores.Get(index) + 1);
+        int count = runner.ActivePlayers.Count();
+        Debug.Log($"[GameManager] CheckPlayersAndStart. Players={count}, StateAuthority={Object.HasStateAuthority}");
 
-        Debug.Log("📊 Marcador actualizado:");
-        for (int i = 0; i < scores.Length; i++)
+        if (count >= 2 && Object.HasStateAuthority)
         {
-            int playerScore = scores.Get(i);
-            if (playerScore > 0)
-            {
-                Debug.Log($"Jugador {i} → {playerScore} puntos");
-            }
+            RpcStartMatch();
         }
     }
 
-    public int GetScore(PlayerRef player)
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    public void RpcStartMatch()
     {
-        return scores.Get(player.RawEncoded);
-    }
-
-    public void StartMatch()
-    {
-        if (matchRunning) return;
-
         matchRunning = true;
 
         if (Object.HasStateAuthority)
         {
-            Timer = 60; // 1 minuto
-            lastTickTime = Time.time;
+            Timer = 60;
+            lastTickTime = Runner.SimulationTime;
+            Debug.Log("[GameManager] RpcStartMatch: Timer reiniciado en host.");
+        }
+
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.ShowStartPanel(false);
+            UIManager.Instance.ShowGameCanvas(true);
+            UIManager.Instance.ShowEndPanel(false);
         }
     }
 
@@ -74,66 +81,74 @@ public class GameManager : NetworkBehaviour
     {
         if (!matchRunning || !Object.HasStateAuthority || Timer <= 0) return;
 
-        // ✅ Decrementar cada segundo real usando Time.time
-        if (Time.time - lastTickTime >= 1f)
+        if (Runner.SimulationTime - lastTickTime >= 1.0)
         {
             Timer--;
-            lastTickTime = Time.time;
+            lastTickTime = Runner.SimulationTime;
+            Debug.Log($"[GameManager] Timer actualizado: {Timer}");
 
             if (Timer <= 0)
             {
-                EndMatch();
+                RpcEndMatch();
             }
         }
     }
 
-    private void EndMatch()
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    public void RpcEndMatch()
     {
         matchRunning = false;
+        Debug.Log("[GameManager] RpcEndMatch: mostrando ganador.");
 
         int maxScore = -1;
         int winnerIndex = -1;
 
         for (int i = 0; i < scores.Length; i++)
         {
-            if (scores.Get(i) > maxScore)
+            int s = scores.Get(i);
+            if (s > maxScore)
             {
-                maxScore = scores.Get(i);
+                maxScore = s;
                 winnerIndex = i;
             }
         }
 
-        Debug.Log($"🏆 Partida terminada. Ganador: Jugador {winnerIndex} con {maxScore} puntos.");
-        UIManager.Instance.ShowEndMatch(winnerIndex, maxScore);
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.ShowGameCanvas(false);
+            UIManager.Instance.ShowEndMatch(winnerIndex, maxScore);
+            UIManager.Instance.ShowEndPanel(true);
+        }
     }
+
+    public void AddKill(PlayerRef killer)
+    {
+        if (!Object.HasStateAuthority) return;
+        int idx = killer.RawEncoded;
+        scores.Set(idx, scores.Get(idx) + 1);
+    }
+
+    public int GetScore(PlayerRef player) => scores.Get(player.RawEncoded);
 
     public void RegisterRetryVote(PlayerRef player)
     {
-        int index = player.RawEncoded;
-        retryVotes.Set(index, true);
-
-        Debug.Log($"Jugador {index} votó Retry");
-
-        CheckAllVotes();
+        if (!Object.HasStateAuthority) return;
+        int idx = player.RawEncoded;
+        retryVotes.Set(idx, true);
+        CheckAllVotesAndRestart();
     }
 
-    private void CheckAllVotes()
+    private void CheckAllVotesAndRestart()
     {
-        foreach (var player in Runner.ActivePlayers)
+        foreach (var p in Runner.ActivePlayers)
         {
-            if (!retryVotes.Get(player.RawEncoded))
+            if (!retryVotes.Get(p.RawEncoded))
                 return;
         }
 
-        ResetVotes();
-        StartMatch();
-    }
-
-    private void ResetVotes()
-    {
         for (int i = 0; i < retryVotes.Length; i++)
-        {
             retryVotes.Set(i, false);
-        }
+
+        RpcStartMatch();
     }
 }
