@@ -151,6 +151,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1cb9ab3e3c648b0429b68a5180e4fdd3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _canY: 0
   player: {fileID: 7536462464679168071}
   mouseSensitivity: 1
   smoothnes: 0
@@ -331,9 +332,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 090cbb29855c47549b42d874b7f4507e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  type: 0
+  firePoint: {fileID: 5146130741239690965}
+  hitLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
   projectilePrefab:
     RawGuidValue: 3fafad5335d50b642824d333f68eda02
-  firePoint: {fileID: 5146130741239690965}
 --- !u!1001 &8006377402554462124
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1256,7 +1261,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac31b00214057e546b9ecc19b8d752bb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  actualWeapon: {fileID: 0}
+  actualWeapon: {fileID: 5622955187571715564}
 --- !u!114 &-2135877987961051159
 MonoBehaviour:
   m_ObjectHideFlags: 0

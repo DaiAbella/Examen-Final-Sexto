@@ -22,7 +22,7 @@ public class GameManager : NetworkBehaviour
         Debug.Log("[GameManager] Awake: Instance asignada.");
     }
 
-    public override void Spawned()
+    public override void Spawned()                                                                              
     {
         Debug.Log($"[GameManager] Spawned. StateAuthority={Object.HasStateAuthority}");
 

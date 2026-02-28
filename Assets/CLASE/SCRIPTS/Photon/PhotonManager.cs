@@ -5,16 +5,71 @@ using System.Collections.Generic;
 using System;
 using UnityEngine.SceneManagement;
 using UnityEngine.Events;
+using Random = UnityEngine.Random;
 
 public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
 {
+
+    public static PhotonManager _PhotonManager;
+
     [SerializeField] private NetworkRunner runner;
     [SerializeField] private NetworkPrefabRef prefab;
     [SerializeField] private NetworkSceneManagerDefault sceneManager;
     [SerializeField] private Transform[] spawnPoint;
     [SerializeField] private UnityEvent onPlayerJoined;
+    [SerializeField] private GameObject menuCanvas;
+
+
+    public List<SessionInfo> availableSessions = new List<SessionInfo>();
+
+
+    public event Action onSessionListUpdated;
+    public static PhotonManager photonManager;
+    public bool isHost;
+
+
+    private void Awake()
+    {
+        if (_PhotonManager == null)
+        {
+            _PhotonManager = this;
+            DontDestroyOnLoad(this.gameObject);
+
+            runner = gameObject.AddComponent<NetworkRunner>();
+        }
+        else
+        {
+            Destroy(this.gameObject);
+        }
+    }
+
+
+
+    private void Start()
+    {
+        runner.AddCallbacks(this);
+    }
+
+
+
+    public async void JoinLobby()
+    {
+        // 🔥 Ahora sí, el runner ya está corriendo cuando llegamos aquí
+        await runner.JoinSessionLobby(SessionLobby.ClientServer);
+    }
+
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.M))
+        {
+            JoinLobby();
+        }
+    }
+
 
     private Dictionary<PlayerRef, NetworkObject> players = new Dictionary<PlayerRef, NetworkObject>();
+
 
     #region Métodos de Photon
 
@@ -133,6 +188,9 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
 
     public void OnSessionListUpdated(NetworkRunner runner, List<SessionInfo> sessionList)
     {
+        availableSessions = sessionList;
+        Debug.Log("Sesion nueva");
+        onSessionListUpdated.Invoke();
     }
 
     public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason)
@@ -145,9 +203,33 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
 
     #endregion
 
+
     private async void StartGame(GameMode mode)
     {
-        runner.AddCallbacks(this);
+        runner.ProvideInput = true;
+
+        var scene = SceneRef.FromIndex(0);
+
+        var props = new Dictionary<string, SessionProperty>()
+    {
+        { "visible", 1 }
+    };
+
+        await runner.StartGame(new StartGameArgs()
+        {
+            GameMode = mode,
+            SessionName = "#0001",
+            Scene = scene,
+            SceneManager = sceneManager,
+            IsVisible = true,
+            SessionProperties = props   // 🔥 NECESARIO PARA QUE APAREZCA EN EL LOBBY
+        });
+    }
+
+
+
+    public async void JoinSession(string sessionName)
+    {
         runner.ProvideInput = true;
 
         var scene = SceneRef.FromIndex(0);
@@ -158,21 +240,81 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
 
         await runner.StartGame(new StartGameArgs()
         {
-            GameMode = mode,
-            SessionName = "#0001",
+            GameMode = GameMode.Client,
+            SessionName = sessionName,
             Scene = scene,
-            CustomLobbyName = "Official EA Europe",
-            SceneManager = sceneManager
+            SceneManager = sceneManager,
+            IsVisible = true,
         });
+
+        // 🔥 APAGAR MENÚ AL ENTRAR COMO CLIENTE
+        if (menuCanvas != null)
+            menuCanvas.SetActive(false);
     }
+
+
 
     public void StartGameAsHost()
     {
         StartGame(GameMode.Host);
+
+        if (menuCanvas != null)
+            menuCanvas.SetActive(false);
     }
+
+
 
     public void StartGameAsClient()
     {
         StartGame(GameMode.Client);
     }
+
+    private string RandomSessionName(int sessionNameLenght)
+    {
+        string caracteres = "abecdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+        string sessionName = "";
+
+        for(int i = 0; i < sessionNameLenght; i++)
+        {
+            char randomChar = caracteres[UnityEngine.Random.Range(0, caracteres.Length)];
+            sessionName += randomChar;
+
+        }
+
+        return sessionName;
+    }
+
+    // 🔥 MÉTODO NUEVO PARA CREAR LOBBY PERSONALIZADO
+    public async void CreateCustomLobby(string sessionName, int maxPlayers)
+    {
+        runner.ProvideInput = true;
+
+        var scene = SceneRef.FromIndex(0);
+
+        var props = new Dictionary<string, SessionProperty>()
+    {
+        { "visible", 1 }   // 🔥 Esto hace que la sesión aparezca en el lobby
+    };
+
+        await runner.StartGame(new StartGameArgs()
+        {
+            GameMode = GameMode.Host,
+            SessionName = sessionName,
+            PlayerCount = maxPlayers,
+            Scene = scene,
+            SceneManager = sceneManager,
+            IsVisible = true,
+            SessionProperties = props   // 🔥 ESTA ES LA CLAVE
+        });
+
+        if (menuCanvas != null)
+            menuCanvas.SetActive(false);
+
+        Debug.Log("Lobby creado: " + sessionName);
+    }
+
+
+
 }
+
+
