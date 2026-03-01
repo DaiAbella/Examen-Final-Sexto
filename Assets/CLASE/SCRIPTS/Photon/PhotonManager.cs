@@ -19,23 +19,17 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
     [SerializeField] private UnityEvent onPlayerJoined;
     [SerializeField] private GameObject menuCanvas;
 
-
     public List<SessionInfo> availableSessions = new List<SessionInfo>();
-
 
     public event Action onSessionListUpdated;
     public static PhotonManager photonManager;
     public bool isHost;
-
 
     private void Awake()
     {
         if (_PhotonManager == null)
         {
             _PhotonManager = this;
-            DontDestroyOnLoad(this.gameObject);
-
-            runner = gameObject.AddComponent<NetworkRunner>();
         }
         else
         {
@@ -43,21 +37,15 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
         }
     }
 
-
-
     private void Start()
     {
         runner.AddCallbacks(this);
     }
 
-
-
     public async void JoinLobby()
     {
-        // 🔥 Ahora sí, el runner ya está corriendo cuando llegamos aquí
         await runner.JoinSessionLobby(SessionLobby.ClientServer);
     }
-
 
     private void Update()
     {
@@ -67,75 +55,40 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
         }
     }
 
-
     private Dictionary<PlayerRef, NetworkObject> players = new Dictionary<PlayerRef, NetworkObject>();
-
 
     #region Métodos de Photon
 
-    public void OnConnectedToServer(NetworkRunner runner)
-    {
-    }
-
-    public void OnConnectFailed(NetworkRunner runner, NetAddress remoteAddress, NetConnectFailedReason reason)
-    {
-    }
-
-    public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token)
-    {
-    }
-
-    public void OnCustomAuthenticationResponse(NetworkRunner runner, Dictionary<string, object> data)
-    {
-    }
-
-    public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason)
-    {
-    }
-
-    public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken)
-    {
-    }
-
+    public void OnConnectedToServer(NetworkRunner runner) { }
+    public void OnConnectFailed(NetworkRunner runner, NetAddress remoteAddress, NetConnectFailedReason reason) { }
+    public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token) { }
+    public void OnCustomAuthenticationResponse(NetworkRunner runner, Dictionary<string, object> data) { }
+    public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason) { }
+    public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
     public void OnInput(NetworkRunner runner, NetworkInput input)
     {
         var data = new NetworkInputData();
 
-        // Movimiento
         Vector2 moveInput = InputManager.Instance.GetMoveInput();
-        data.move = moveInput;      // (No puede ser null, Vector2 es struct)
+        data.move = moveInput;
 
-        // Rotación con el mouse
         data.look = InputManager.Instance.GetMouseDelta();
-
-        // Estado de correr
         data.isRunning = InputManager.Instance.WasRunInputPressed();
 
-        // Rotación de la cámara
         if (Camera.main != null)
             data.yRotation = Camera.main.transform.eulerAngles.y;
 
-        // Disparo
         data.shoot = InputManager.Instance.ShootInputPressed();
 
-        // Dirección del disparo
         if (data.shoot && Camera.main != null)
             data.fireDirection = Camera.main.transform.forward;
 
         input.Set(data);
     }
 
-    public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input)
-    {
-    }
-
-    public void OnObjectEnterAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player)
-    {
-    }
-
-    public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player)
-    {
-    }
+    public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input) { }
+    public void OnObjectEnterAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
+    public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
 
     public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
     {
@@ -152,7 +105,6 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
 
             players.Add(player, networkPlayer);
 
-            // 🔹 Arrancar partida cuando haya jugadores
             if (GameManager.Instance != null)
                 GameManager.Instance.CheckPlayersAndStart(runner);
         }
@@ -170,21 +122,10 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
         }
     }
 
-    public void OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key, float progress)
-    {
-    }
-
-    public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data)
-    {
-    }
-
-    public void OnSceneLoadDone(NetworkRunner runner)
-    {
-    }
-
-    public void OnSceneLoadStart(NetworkRunner runner)
-    {
-    }
+    public void OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key, float progress) { }
+    public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data) { }
+    public void OnSceneLoadDone(NetworkRunner runner) { }
+    public void OnSceneLoadStart(NetworkRunner runner) { }
 
     public void OnSessionListUpdated(NetworkRunner runner, List<SessionInfo> sessionList)
     {
@@ -193,27 +134,20 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
         onSessionListUpdated.Invoke();
     }
 
-    public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason)
-    {
-    }
-
-    public void OnUserSimulationMessage(NetworkRunner runner, SimulationMessagePtr message)
-    {
-    }
+    public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason) { }
+    public void OnUserSimulationMessage(NetworkRunner runner, SimulationMessagePtr message) { }
 
     #endregion
-
 
     private async void StartGame(GameMode mode)
     {
         runner.ProvideInput = true;
 
         var scene = SceneRef.FromIndex(0);
+        var sceneInfo = new NetworkSceneInfo();
 
-        var props = new Dictionary<string, SessionProperty>()
-    {
-        { "visible", 1 }
-    };
+        if (scene.IsValid)
+            sceneInfo.AddSceneRef(scene, LoadSceneMode.Additive);
 
         await runner.StartGame(new StartGameArgs()
         {
@@ -222,11 +156,8 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
             Scene = scene,
             SceneManager = sceneManager,
             IsVisible = true,
-            SessionProperties = props   // 🔥 NECESARIO PARA QUE APAREZCA EN EL LOBBY
         });
     }
-
-
 
     public async void JoinSession(string sessionName)
     {
@@ -253,7 +184,6 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
     }
 
 
-
     public void StartGameAsHost()
     {
         StartGame(GameMode.Host);
@@ -261,7 +191,6 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
         if (menuCanvas != null)
             menuCanvas.SetActive(false);
     }
-
 
 
     public void StartGameAsClient()
@@ -274,16 +203,16 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
         string caracteres = "abecdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
         string sessionName = "";
 
-        for(int i = 0; i < sessionNameLenght; i++)
+        for (int i = 0; i < sessionNameLenght; i++)
         {
             char randomChar = caracteres[UnityEngine.Random.Range(0, caracteres.Length)];
             sessionName += randomChar;
-
         }
 
         return sessionName;
     }
 
+    // 🔥🔥🔥 MÉTODO NUEVO PARA CREAR LOBBY PERSONALIZADO 🔥🔥🔥
     // 🔥 MÉTODO NUEVO PARA CREAR LOBBY PERSONALIZADO
     public async void CreateCustomLobby(string sessionName, int maxPlayers)
     {
@@ -291,12 +220,8 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
 
         var scene = SceneRef.FromIndex(0);
 
-        var props = new Dictionary<string, SessionProperty>()
-    {
-        { "visible", 1 }   // 🔥 Esto hace que la sesión aparezca en el lobby
-    };
-
         await runner.StartGame(new StartGameArgs()
+
         {
             GameMode = GameMode.Host,
             SessionName = sessionName,
@@ -304,7 +229,6 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
             Scene = scene,
             SceneManager = sceneManager,
             IsVisible = true,
-            SessionProperties = props   // 🔥 ESTA ES LA CLAVE
         });
 
         if (menuCanvas != null)
@@ -313,8 +237,4 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
         Debug.Log("Lobby creado: " + sessionName);
     }
 
-
-
 }
-
-

@@ -22,7 +22,7 @@ public class GameManager : NetworkBehaviour
         Debug.Log("[GameManager] Awake: Instance asignada.");
     }
 
-    public override void Spawned()                                                                              
+    public override void Spawned()
     {
         Debug.Log($"[GameManager] Spawned. StateAuthority={Object.HasStateAuthority}");
 
@@ -48,6 +48,8 @@ public class GameManager : NetworkBehaviour
 
     public void CheckPlayersAndStart(NetworkRunner runner)
     {
+        if (Object == null || !Object.IsValid) return;   // ✔ Protección correcta
+
         int count = runner.ActivePlayers.Count();
         Debug.Log($"[GameManager] CheckPlayersAndStart. Players={count}, StateAuthority={Object.HasStateAuthority}");
 
@@ -60,6 +62,8 @@ public class GameManager : NetworkBehaviour
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
     public void RpcStartMatch()
     {
+        if (Object == null || !Object.IsValid) return;   // ✔ Protección correcta
+
         matchRunning = true;
 
         if (Object.HasStateAuthority)
@@ -79,6 +83,8 @@ public class GameManager : NetworkBehaviour
 
     public override void FixedUpdateNetwork()
     {
+        if (Object == null || !Object.IsValid) return;   // ✔ Protección correcta
+
         if (!matchRunning || !Object.HasStateAuthority || Timer <= 0) return;
 
         if (Runner.SimulationTime - lastTickTime >= 1.0)
@@ -97,6 +103,8 @@ public class GameManager : NetworkBehaviour
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
     public void RpcEndMatch()
     {
+        if (Object == null || !Object.IsValid) return;   // ✔ Protección correcta
+
         matchRunning = false;
         Debug.Log("[GameManager] RpcEndMatch: mostrando ganador.");
 
@@ -123,16 +131,24 @@ public class GameManager : NetworkBehaviour
 
     public void AddKill(PlayerRef killer)
     {
+        if (Object == null || !Object.IsValid) return;   // ✔ Protección correcta
         if (!Object.HasStateAuthority) return;
+
         int idx = killer.RawEncoded;
         scores.Set(idx, scores.Get(idx) + 1);
     }
 
-    public int GetScore(PlayerRef player) => scores.Get(player.RawEncoded);
+    public int GetScore(PlayerRef player)
+    {
+        if (Object == null || !Object.IsValid) return 0;   // ✔ Protección correcta
+        return scores.Get(player.RawEncoded);
+    }
 
     public void RegisterRetryVote(PlayerRef player)
     {
+        if (Object == null || !Object.IsValid) return;   // ✔ Protección correcta
         if (!Object.HasStateAuthority) return;
+
         int idx = player.RawEncoded;
         retryVotes.Set(idx, true);
         CheckAllVotesAndRestart();
@@ -140,6 +156,8 @@ public class GameManager : NetworkBehaviour
 
     private void CheckAllVotesAndRestart()
     {
+        if (Object == null || !Object.IsValid) return;   // ✔ Protección correcta
+
         foreach (var p in Runner.ActivePlayers)
         {
             if (!retryVotes.Get(p.RawEncoded))

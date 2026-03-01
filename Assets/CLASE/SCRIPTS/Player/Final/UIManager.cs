@@ -22,7 +22,6 @@ public class UIManager : MonoBehaviour
     {
         Instance = this;
 
-        // Estado inicial
         ShowStartPanel(true);
         ShowGameCanvas(false);
         ShowEndPanel(false);
@@ -38,7 +37,12 @@ public class UIManager : MonoBehaviour
 
     private void Update()
     {
-        if (GameManager.Instance == null || runner == null) return;
+        // Si no hay runner o GameManager, no hacemos nada
+        if (runner == null || GameManager.Instance == null) return;
+
+        // 🔥 Protección crítica: evitar acceder a Networked vars antes de Spawned()
+        if (GameManager.Instance.Object == null || !GameManager.Instance.Object.IsValid)
+            return;
 
         // ⏱ Actualizar Timer
         if (timerText != null)
@@ -61,28 +65,24 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    // 🔹 Activar/desactivar panel de inicio
     public void ShowStartPanel(bool active)
     {
         if (panelStartButtons != null) panelStartButtons.SetActive(active);
         Debug.Log($"[UIManager] Panel_StartButtons activo: {active}");
     }
 
-    // 🔹 Activar/desactivar panel de juego
     public void ShowGameCanvas(bool active)
     {
         if (panelGameUI != null) panelGameUI.SetActive(active);
         Debug.Log($"[UIManager] Panel_GameUI activo: {active}");
     }
 
-    // 🔹 Activar/desactivar panel de fin de partida
     public void ShowEndPanel(bool active)
     {
         if (panelEndMatch != null) panelEndMatch.SetActive(active);
         Debug.Log($"[UIManager] Panel_EndMatch activo: {active}");
     }
 
-    // 🏆 Mostrar texto de ganador
     public void ShowEndMatch(int winnerIndex, int maxScore)
     {
         if (winnerText != null)
@@ -92,7 +92,6 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    // 🔘 Botón de salir
     public void OnExitButton()
     {
         Application.Quit();
@@ -101,7 +100,6 @@ public class UIManager : MonoBehaviour
 #endif
     }
 
-    // 🔁 Botón de intentar de nuevo
     public void OnRetryButton()
     {
         ShowEndPanel(false);

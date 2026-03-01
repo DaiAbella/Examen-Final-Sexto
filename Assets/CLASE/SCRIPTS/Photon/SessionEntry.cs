@@ -14,18 +14,17 @@ public class SessionEntry : MonoBehaviour
         sessionName.text = sessionInfo.Name;
         playerCount.text = sessionInfo.PlayerCount.ToString() + "/" + sessionInfo.MaxPlayers.ToString();
 
-        if (sessionInfo.PlayerCount >= sessionInfo.MaxPlayers )
-        
+        if (sessionInfo.PlayerCount >= sessionInfo.MaxPlayers)
+
         {
 
             joinButton.interactable = false;
         }
     }
 
-    public void JoinSession() 
+    public void JoinSession()
     {
         PhotonManager._PhotonManager.JoinSession(sessionName.text);
     }
 
 }
-

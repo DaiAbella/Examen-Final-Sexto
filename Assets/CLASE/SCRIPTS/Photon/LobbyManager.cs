@@ -1,6 +1,5 @@
 ﻿using Fusion;
 using TMPro;
-using TMPro.SpriteAssetUtilities;
 using UnityEngine;
 
 public class LobbyManager : MonoBehaviour
@@ -12,41 +11,37 @@ public class LobbyManager : MonoBehaviour
     [Header("Custom Session")]
     [SerializeField] private TMP_InputField sessionNameInput;
     [SerializeField] private TMP_Text maxPlayerCountTxt;
-    private int maxPlayerCount =0;
+
+    private int maxPlayerCount = 0;
+
     private void OnEnable()
-    { 
+    {
         PhotonManager._PhotonManager.onSessionListUpdated += DestroyCanvasContent;
         PhotonManager._PhotonManager.onSessionListUpdated += UpdateSessionCanvas;
         maxPlayerCountTxt.text = maxPlayerCount.ToString();
-       
     }
 
     private void OnDisable()
     {
         PhotonManager._PhotonManager.onSessionListUpdated -= DestroyCanvasContent;
         PhotonManager._PhotonManager.onSessionListUpdated -= UpdateSessionCanvas;
-
-      
     }
 
     public void DestroyCanvasContent()
     {
-
         Debug.Log("Destroy Canvas");
-        WarningMessage.SetActive(PhotonManager._PhotonManager.availableSessions.Count <=0);
+        WarningMessage.SetActive(PhotonManager._PhotonManager.availableSessions.Count <= 0);
 
-        for (int i = 0; i <viewportContent.childCount; i++)
+        for (int i = 0; i < viewportContent.childCount; i++)
         {
-
             Destroy(viewportContent.GetChild(i).gameObject);
-
         }
     }
 
     public void UpdateSessionCanvas()
     {
-
         Debug.Log("Creando sesiones: " + PhotonManager._PhotonManager.availableSessions.Count);
+
         foreach (SessionInfo session in PhotonManager._PhotonManager.availableSessions)
         {
             GameObject sessionInstance = Instantiate(lobbyPrefab, viewportContent);
@@ -57,8 +52,7 @@ public class LobbyManager : MonoBehaviour
     public void UpdatePlayerCount(int number)
     {
         maxPlayerCount += number;
-
-        maxPlayerCount = maxPlayerCount > 10? 1 : maxPlayerCount <= 0? 10: maxPlayerCount;
+        maxPlayerCount = maxPlayerCount > 10 ? 1 : maxPlayerCount <= 0 ? 10 : maxPlayerCount;
         maxPlayerCountTxt.text = maxPlayerCount.ToString();
     }
 
@@ -67,10 +61,9 @@ public class LobbyManager : MonoBehaviour
         maxPlayerCount = 1;
         maxPlayerCountTxt.text = maxPlayerCount.ToString();
         sessionNameInput.text = string.Empty;
-
     }
 
-    // 🔥 MÉTODO NUEVO PARA EL BOTÓN "CREATE LOBBY"
+    // 🔥🔥🔥 MÉTODO NUEVO PARA EL BOTÓN "CREATE LOBBY" 🔥🔥🔥
     public void CreateLobbyButton()
     {
         string sessionName = sessionNameInput.text;
@@ -83,5 +76,4 @@ public class LobbyManager : MonoBehaviour
 
         PhotonManager._PhotonManager.CreateCustomLobby(sessionName, maxPlayerCount);
     }
-
 }
