@@ -8,6 +8,7 @@ using UnityEngine.Serialization;
 public class CameraController : NetworkBehaviour
 {
     [Networked] public float canY { get; set; }
+
     [Header("Camera Settings")]
     [SerializeField] private Transform player;
     [SerializeField] private float mouseSensitivity = 1f;
@@ -35,6 +36,12 @@ public class CameraController : NetworkBehaviour
     private InputManager inputManager;
     private KCC kcc;
 
+    // -------------------------
+    // NUEVO: Meshes del jugador
+    // -------------------------
+    [Header("Player Meshes (SkinnedMeshRenderers)")]
+    [SerializeField] private SkinnedMeshRenderer[] playerMeshes;
+
     private void Awake()
     {
         startPos = transform.localPosition;
@@ -55,10 +62,23 @@ public class CameraController : NetworkBehaviour
 
     public override void Spawned()
     {
+        // -----------------------------------------
+        // 1. Control de cámara según autoridad
+        // -----------------------------------------
         if (!HasInputAuthority)
         {
             GetComponent<Camera>().enabled = false;
             GetComponent<AudioListener>().enabled = false;
+
+            // Soy un jugador remoto → mostrar su mesh
+            foreach (var mesh in playerMeshes)
+                mesh.enabled = true;
+        }
+        else
+        {
+            // Soy el jugador local → ocultar mi mesh
+            foreach (var mesh in playerMeshes)
+                mesh.enabled = false;
         }
     }
 
@@ -77,16 +97,9 @@ public class CameraController : NetworkBehaviour
     {
         if (!HasInputAuthority && !HasStateAuthority)
         {
-
-            transform.localRotation = Quaternion.AngleAxis(-canY, Vector3.right);        
-        
+            transform.localRotation = Quaternion.AngleAxis(-canY, Vector3.right);
         }
-
-
     }
-
-
-
 
     private void RotateCamera(NetworkInputData input)
     {

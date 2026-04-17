@@ -9,7 +9,7 @@ public abstract class Weapon : NetworkBehaviour
     [SerializeField] protected NetworkPrefabRef bullet;
     [SerializeField] protected Camera playerCam;
 
-    [SerializeField] protected float damage;
+    [SerializeField] protected int damage;
     [SerializeField] protected float range;
     [SerializeField] protected int actualAmmo;
     [SerializeField] protected LayerMask LayerMask;

@@ -151,6 +151,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1cb9ab3e3c648b0429b68a5180e4fdd3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _canY: 0
   player: {fileID: 7427706669538586542}
   mouseSensitivity: 1
   smoothnes: 0
@@ -1039,7 +1040,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7809052020040922388}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c9211a8bf11ea7e4f8323e53a768ea14, type: 3}
   m_Name: 
@@ -1057,7 +1058,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7809052020040922388}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f590ec3b6c4dcca4ba27663b4596970f, type: 3}
   m_Name: 
@@ -1087,7 +1088,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7809052020040922388}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
   m_Name: 

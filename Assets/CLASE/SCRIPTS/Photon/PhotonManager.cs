@@ -97,11 +97,25 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
             int randomSpawn = UnityEngine.Random.Range(0, spawnPoint.Length);
 
             NetworkObject networkPlayer = runner.Spawn(
-                prefab,
-                spawnPoint[randomSpawn].position,
-                spawnPoint[randomSpawn].rotation,
-                player
-            );
+     prefab,
+     spawnPoint[randomSpawn].position,
+     spawnPoint[randomSpawn].rotation,
+     player,
+     (runner, obj) =>
+     {
+         var pn = obj.GetComponent<PlayerNetwork>();
+         if (pn != null)
+         {
+             pn.WeaponColor = PlayfabManager.SavedWeaponColor;
+             Debug.Log("[PhotonManager] WeaponColor asignado al jugador: " + PlayfabManager.SavedWeaponColor);
+         }
+         else
+         {
+             Debug.LogError("[PhotonManager] PlayerNetwork NO encontrado en el prefab del jugador.");
+         }
+     }
+ );
+
 
             players.Add(player, networkPlayer);
 

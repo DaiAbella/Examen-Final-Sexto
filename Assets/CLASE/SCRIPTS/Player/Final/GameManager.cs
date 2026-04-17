@@ -28,9 +28,10 @@ public class GameManager : NetworkBehaviour
 
         if (Object.HasStateAuthority)
         {
-            Timer = 60;
+            // ⏱ Tiempo inicial de la partida: 2 minutos (120s)
+            Timer = 120;
             lastTickTime = Runner.SimulationTime;
-            Debug.Log("[GameManager] Timer inicializado en host.");
+            Debug.Log("[GameManager] Timer inicializado en host (120s).");
         }
     }
 
@@ -48,11 +49,12 @@ public class GameManager : NetworkBehaviour
 
     public void CheckPlayersAndStart(NetworkRunner runner)
     {
-        if (Object == null || !Object.IsValid) return;   // ✔ Protección correcta
+        if (Object == null || !Object.IsValid) return;
 
         int count = runner.ActivePlayers.Count();
         Debug.Log($"[GameManager] CheckPlayersAndStart. Players={count}, StateAuthority={Object.HasStateAuthority}");
 
+        // 🔥 La partida solo empieza cuando hay 2 o más jugadores
         if (count >= 2 && Object.HasStateAuthority)
         {
             RpcStartMatch();
@@ -62,28 +64,26 @@ public class GameManager : NetworkBehaviour
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
     public void RpcStartMatch()
     {
-        if (Object == null || !Object.IsValid) return;   // ✔ Protección correcta
+        if (Object == null || !Object.IsValid) return;
 
         matchRunning = true;
 
         if (Object.HasStateAuthority)
         {
-            Timer = 60;
+            // Reiniciamos el timer a 2 minutos al empezar la partida
+            Timer = 120;
             lastTickTime = Runner.SimulationTime;
-            Debug.Log("[GameManager] RpcStartMatch: Timer reiniciado en host.");
+            Debug.Log("[GameManager] RpcStartMatch: Timer reiniciado en host (120s).");
         }
 
-        if (UIManager.Instance != null)
-        {
-            UIManager.Instance.ShowStartPanel(false);
-            UIManager.Instance.ShowGameCanvas(true);
-            UIManager.Instance.ShowEndPanel(false);
-        }
+        // 👇 Ya no tocamos paneles aquí.
+        // El UIManager se encarga de mostrar el GameUI siempre,
+        // y solo mostramos el panel final al terminar.
     }
 
     public override void FixedUpdateNetwork()
     {
-        if (Object == null || !Object.IsValid) return;   // ✔ Protección correcta
+        if (Object == null || !Object.IsValid) return;
 
         if (!matchRunning || !Object.HasStateAuthority || Timer <= 0) return;
 
@@ -103,10 +103,10 @@ public class GameManager : NetworkBehaviour
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
     public void RpcEndMatch()
     {
-        if (Object == null || !Object.IsValid) return;   // ✔ Protección correcta
+        if (Object == null || !Object.IsValid) return;
 
         matchRunning = false;
-        Debug.Log("[GameManager] RpcEndMatch: mostrando ganador.");
+        Debug.Log("[GameManager] RpcEndMatch: calculando ganador y mostrando resultado.");
 
         int maxScore = -1;
         int winnerIndex = -1;
@@ -121,32 +121,32 @@ public class GameManager : NetworkBehaviour
             }
         }
 
+        // 👇 Solo notificamos al UI del resultado.
         if (UIManager.Instance != null)
         {
-            UIManager.Instance.ShowGameCanvas(false);
             UIManager.Instance.ShowEndMatch(winnerIndex, maxScore);
-            UIManager.Instance.ShowEndPanel(true);
         }
     }
 
     public void AddKill(PlayerRef killer)
     {
-        if (Object == null || !Object.IsValid) return;   // ✔ Protección correcta
+        if (Object == null || !Object.IsValid) return;
         if (!Object.HasStateAuthority) return;
 
         int idx = killer.RawEncoded;
         scores.Set(idx, scores.Get(idx) + 1);
+        Debug.Log($"[GameManager] AddKill → Player {idx} ahora tiene {scores.Get(idx)} puntos.");
     }
 
     public int GetScore(PlayerRef player)
     {
-        if (Object == null || !Object.IsValid) return 0;   // ✔ Protección correcta
+        if (Object == null || !Object.IsValid) return 0;
         return scores.Get(player.RawEncoded);
     }
 
     public void RegisterRetryVote(PlayerRef player)
     {
-        if (Object == null || !Object.IsValid) return;   // ✔ Protección correcta
+        if (Object == null || !Object.IsValid) return;
         if (!Object.HasStateAuthority) return;
 
         int idx = player.RawEncoded;
@@ -156,7 +156,7 @@ public class GameManager : NetworkBehaviour
 
     private void CheckAllVotesAndRestart()
     {
-        if (Object == null || !Object.IsValid) return;   // ✔ Protección correcta
+        if (Object == null || !Object.IsValid) return;
 
         foreach (var p in Runner.ActivePlayers)
         {

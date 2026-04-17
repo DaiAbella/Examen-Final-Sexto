@@ -7,7 +7,7 @@ public class UIManager : MonoBehaviour
     public static UIManager Instance;
 
     [Header("Paneles UI")]
-    [SerializeField] private GameObject panelStartButtons;
+    [SerializeField] private GameObject panelStartButtons; // Solo referencia, NO se activa aquí
     [SerializeField] private GameObject panelGameUI;
     [SerializeField] private GameObject panelEndMatch;
 
@@ -22,35 +22,31 @@ public class UIManager : MonoBehaviour
     {
         Instance = this;
 
-        ShowStartPanel(true);
-        ShowGameCanvas(false);
-        ShowEndPanel(false);
+        // El UIManager del gameplay NO controla el menú
+        // El menú se activa/desactiva desde tu lógica de escenas
 
-        Debug.Log("[UIManager] Awake. Paneles inicializados.");
+        if (panelGameUI != null)
+            panelGameUI.SetActive(true);   // HUD siempre visible
+
+        if (panelEndMatch != null)
+            panelEndMatch.SetActive(false); // EndMatch oculto al inicio
     }
 
     private void Start()
     {
         runner = FindObjectOfType<NetworkRunner>();
-        if (runner == null) Debug.LogWarning("[UIManager] No se encontró NetworkRunner.");
     }
 
     private void Update()
     {
-        // Si no hay runner o GameManager, no hacemos nada
         if (runner == null || GameManager.Instance == null) return;
+        if (GameManager.Instance.Object == null || !GameManager.Instance.Object.IsValid) return;
 
-        // 🔥 Protección crítica: evitar acceder a Networked vars antes de Spawned()
-        if (GameManager.Instance.Object == null || !GameManager.Instance.Object.IsValid)
-            return;
-
-        // ⏱ Actualizar Timer
+        // Timer
         if (timerText != null)
-        {
             timerText.text = $"Tiempo: {GameManager.Instance.Timer}s";
-        }
 
-        // 🏁 Actualizar marcador
+        // Scoreboard
         if (scoreText != null)
         {
             string scoresDisplay = "";
@@ -65,36 +61,24 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    public void ShowStartPanel(bool active)
-    {
-        if (panelStartButtons != null) panelStartButtons.SetActive(active);
-        Debug.Log($"[UIManager] Panel_StartButtons activo: {active}");
-    }
-
-    public void ShowGameCanvas(bool active)
-    {
-        if (panelGameUI != null) panelGameUI.SetActive(active);
-        Debug.Log($"[UIManager] Panel_GameUI activo: {active}");
-    }
-
-    public void ShowEndPanel(bool active)
-    {
-        if (panelEndMatch != null) panelEndMatch.SetActive(active);
-        Debug.Log($"[UIManager] Panel_EndMatch activo: {active}");
-    }
-
     public void ShowEndMatch(int winnerIndex, int maxScore)
     {
-        if (winnerText != null)
-        {
-            winnerText.text = $"🏆 Ganador: Jugador {winnerIndex} con {maxScore} puntos";
-            Debug.Log($"[UIManager] Texto de ganador actualizado.");
-        }
+        if (panelEndMatch != null)
+            panelEndMatch.SetActive(true);
+
+        if (winnerText == null) return;
+
+        if (winnerIndex == -1)
+            winnerText.text = "Ningún jugador ganó puntos";
+        else
+            winnerText.text = $"Ganó el jugador {winnerIndex} con {maxScore} puntos";
     }
 
     public void OnExitButton()
     {
+        Debug.Log("EXIT PRESIONADO");
         Application.Quit();
+
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
 #endif
@@ -102,11 +86,13 @@ public class UIManager : MonoBehaviour
 
     public void OnRetryButton()
     {
-        ShowEndPanel(false);
+        Debug.Log("RETRY PRESIONADO");
 
-        if (GameManager.Instance != null && runner != null)
-        {
-            GameManager.Instance.RegisterRetryVote(runner.LocalPlayer);
-        }
+        if (panelEndMatch != null)
+            panelEndMatch.SetActive(false);
+
+        // Reiniciar partida
+        if (GameManager.Instance != null)
+            GameManager.Instance.RpcStartMatch();
     }
 }
